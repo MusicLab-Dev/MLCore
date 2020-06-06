@@ -3,7 +3,6 @@ project(MLCoreTests)
 set(MLCoreTestsDir ${MLCoreDir}/Tests)
 
 set(MLCoreTestsSources
-    ${MLCoreTestsDir}/Main.cpp
     ${MLCoreTestsDir}/tests_SafeQueue.cpp
 )
 
@@ -14,5 +13,5 @@ add_test(NAME ${CMAKE_PROJECT_NAME} COMMAND ${CMAKE_PROJECT_NAME})
 target_link_libraries(${CMAKE_PROJECT_NAME}
 PUBLIC
     MLCoreLib
-    gtest
+    GTest::GTest GTest::Main
 )
