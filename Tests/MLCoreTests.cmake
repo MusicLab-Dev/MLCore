@@ -3,7 +3,7 @@ project(MLCoreTests)
 set(MLCoreTestsDir ${MLCoreDir}/Tests)
 
 set(MLCoreTestsSources
-    ${MLCoreTestsDir}/tests_SafeQueue.cpp
+    ${MLCoreTestsDir}/tests_FlatVector.cpp
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${MLCoreTestsSources})
