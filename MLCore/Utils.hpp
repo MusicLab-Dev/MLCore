@@ -7,7 +7,6 @@
 
 #include <type_traits>
 #include <cinttypes>
-#include <concepts>
 
 /** @brief Various exception helpers */
 #define nothrow_constructible(Type, ...) std::is_nothrow_constructible_v<Type __VA_OPT__(,) __VA_ARGS__>

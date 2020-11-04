@@ -7,7 +7,6 @@ template<typename Base, typename Type, typename Range>
 template<typename ...Args>
 inline Type &Core::Internal::VectorDetails<Base, Type, Range>::push(Args &&...args)
     noexcept(std::is_nothrow_constructible_v<Type, Args...> && nothrow_destructible(Type))
-    requires std::constructible_from<Type, Args...>
 {
     if (!data()) [[unlikely]]
         reserve(2);
@@ -30,8 +29,8 @@ inline void Core::Internal::VectorDetails<Base, Type, Range>::pop(void) noexcept
 }
 
 template<typename Base, typename Type, typename Range>
-template<std::input_iterator InputIterator> requires std::constructible_from<Type, decltype(*std::declval<InputIterator>())>
-inline typename Core::Internal::VectorDetails<Base, Type, Range>::Iterator
+template<typename InputIterator>
+inline std::enable_if_t<std::is_constructible_v<Type, decltype(*std::declval<InputIterator>())>, typename Core::Internal::VectorDetails<Base, Type, Range>::Iterator>
     Core::Internal::VectorDetails<Base, Type, Range>::insert(const Iterator pos, const InputIterator from, const InputIterator to)
     noexcept(nothrow_forward_constructible(Type) && nothrow_destructible(Type))
 {
@@ -164,8 +163,9 @@ inline void Core::Internal::VectorDetails<Base, Type, Range>::resize(const std::
 }
 
 template<typename Base, typename Type, typename Range>
-template<std::input_iterator InputIterator>
-inline void Core::Internal::VectorDetails<Base, Type, Range>::resize(const InputIterator from, const InputIterator to)
+template<typename InputIterator>
+inline std::enable_if_t<std::is_constructible_v<Type, decltype(*std::declval<InputIterator>())>, void>
+    Core::Internal::VectorDetails<Base, Type, Range>::resize(const InputIterator from, const InputIterator to)
     noexcept(nothrow_destructible(Type) && nothrow_forward_iterator_constructible(InputIterator))
 {
     const std::size_t count = std::distance(from, to);

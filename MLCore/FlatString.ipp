@@ -85,7 +85,6 @@ template<typename Type>
 template<typename ...Args>
 inline void Core::FlatStringBase<Type>::push(Args &&...args)
     noexcept(nothrow_constructible(Type, Args...) && nothrow_destructible(Type))
-    requires std::constructible_from<Type, Args...>
 {
     if (!_ptr) [[unlikely]]
         reserve(2);
@@ -105,7 +104,6 @@ inline void Core::FlatStringBase<Type>::pop(void) noexcept_destructible(Type)
 template<typename Type>
 inline void Core::FlatStringBase<Type>::resize(const std::size_t count)
     noexcept(nothrow_constructible(Type) && nothrow_destructible(Type))
-    requires std::constructible_from<Type>
 {
     if (!_ptr || _ptr->capacity < count) [[likely]]
         reserve(count);
@@ -118,7 +116,6 @@ inline void Core::FlatStringBase<Type>::resize(const std::size_t count)
 template<typename Type>
 inline void Core::FlatStringBase<Type>::resize(const std::size_t count, const Type &value)
     noexcept(nothrow_copy_constructible(Type) && nothrow_destructible(Type))
-    requires std::copy_constructible<Type>
 {
     if (!_ptr || _ptr->capacity < count) [[likely]]
         reserve(count);
@@ -129,7 +126,7 @@ inline void Core::FlatStringBase<Type>::resize(const std::size_t count, const Ty
 }
 
 template<typename Type>
-template<std::input_iterator InputIterator>
+template<typename InputIterator>
 inline void Core::FlatStringBase<Type>::resize(const InputIterator from, const InputIterator to)
     noexcept(nothrow_destructible(Type) && nothrow_forward_iterator_constructible(InputIterator))
 {
@@ -141,7 +138,7 @@ inline void Core::FlatStringBase<Type>::resize(const InputIterator from, const I
 }
 
 template<typename Type>
-template<std::input_iterator InputIterator>
+template<typename InputIterator>
 Core::FlatStringBase<Type>::Iterator Core::FlatStringBase<Type>::insert(const Iterator pos, const InputIterator from, const InputIterator to)
     noexcept(nothrow_forward_constructible(Type) && nothrow_destructible(Type))
 {
@@ -184,7 +181,6 @@ Core::FlatStringBase<Type>::Iterator Core::FlatStringBase<Type>::insert(const It
 template<typename Type>
 Core::FlatStringBase<Type>::Iterator Core::FlatStringBase<Type>::insert(const Iterator pos, const std::size_t count, const Type &value)
     noexcept(nothrow_copy_constructible(Type) && nothrow_destructible(Type))
-    requires std::copy_constructible<Type>
 {
     if (pos == nullptr) [[unlikely]] {
         resize(count, value);

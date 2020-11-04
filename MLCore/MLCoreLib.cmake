@@ -10,7 +10,6 @@ set(MLCoreLibSources
     ${MLCoreLibDir}/Vector.hpp
     ${MLCoreLibDir}/Vector.ipp
     ${MLCoreLibDir}/FlatVector.hpp
-    ${MLCoreLibDir}/FlatVector.ipp
     ${MLCoreLibDir}/FlatString.hpp
     ${MLCoreLibDir}/FlatString.ipp
     ${MLCoreLibDir}/Core.cpp

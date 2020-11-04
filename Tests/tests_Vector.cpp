@@ -182,7 +182,8 @@ TEST(Vector, Erase)
         auto vector = Get();
         vector.erase(vector.end() - count / 2, vector.end());
         ASSERT_EQ(vector.size(), count / 2);
-        for (auto i = 0; auto elem : vector) {
+        auto i = 0;
+        for (auto elem : vector) {
             ASSERT_EQ(elem, i++);
         }
         vector.erase(vector.begin(), vector.size() - 1);
