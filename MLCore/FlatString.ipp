@@ -85,6 +85,7 @@ template<typename Type>
 template<typename ...Args>
 inline void Core::FlatStringBase<Type>::push(Args &&...args)
     noexcept(nothrow_constructible(Type, Args...) && nothrow_destructible(Type))
+    requires std::constructible_from<Type, Args...>
 {
     if (!_ptr) [[unlikely]]
         reserve(2);
@@ -104,6 +105,7 @@ inline void Core::FlatStringBase<Type>::pop(void) noexcept_destructible(Type)
 template<typename Type>
 inline void Core::FlatStringBase<Type>::resize(const std::size_t count)
     noexcept(nothrow_constructible(Type) && nothrow_destructible(Type))
+    requires std::constructible_from<Type>
 {
     if (!_ptr || _ptr->capacity < count) [[likely]]
         reserve(count);
@@ -116,6 +118,7 @@ inline void Core::FlatStringBase<Type>::resize(const std::size_t count)
 template<typename Type>
 inline void Core::FlatStringBase<Type>::resize(const std::size_t count, const Type &value)
     noexcept(nothrow_copy_constructible(Type) && nothrow_destructible(Type))
+    requires std::copy_constructible<Type>
 {
     if (!_ptr || _ptr->capacity < count) [[likely]]
         reserve(count);
@@ -126,7 +129,7 @@ inline void Core::FlatStringBase<Type>::resize(const std::size_t count, const Ty
 }
 
 template<typename Type>
-template<typename InputIterator>
+template<std::input_iterator InputIterator>
 inline void Core::FlatStringBase<Type>::resize(const InputIterator from, const InputIterator to)
     noexcept(nothrow_destructible(Type) && nothrow_forward_iterator_constructible(InputIterator))
 {
@@ -138,8 +141,8 @@ inline void Core::FlatStringBase<Type>::resize(const InputIterator from, const I
 }
 
 template<typename Type>
-template<typename InputIterator>
-Core::FlatStringBase<Type>::Iterator Core::FlatStringBase<Type>::insert(const Iterator at, const InputIterator from, const InputIterator to)
+template<std::input_iterator InputIterator>
+Core::FlatStringBase<Type>::Iterator Core::FlatStringBase<Type>::insert(const Iterator pos, const InputIterator from, const InputIterator to)
     noexcept(nothrow_forward_constructible(Type) && nothrow_destructible(Type))
 {
     const auto count { static_cast<std::size_t>(std::distance(from, to)) };
@@ -148,8 +151,8 @@ Core::FlatStringBase<Type>::Iterator Core::FlatStringBase<Type>::insert(const It
         reserve(count);
         position = 0;
     } else
-        position = at - begin<false>();
-    if (const auto currentSize = size<false>(), total = currentSize + count; total > capacity<false>()) [[unlikely]] {
+        position = pos - beginUnsafe();
+    if (const auto currentSize = sizeUnsafe(), total = currentSize + count; total > capacityUnsafe()) [[unlikely]] {
         const auto tmpSize = currentSize + std::max(currentSize, count);
         const auto tmpPtr = reinterpret_cast<Header *>(std::malloc(sizeof(Header) + sizeof(Type) * tmpSize));
         const auto tmpData = reinterpret_cast<Type *>(tmpPtr + 1);
@@ -162,9 +165,9 @@ Core::FlatStringBase<Type>::Iterator Core::FlatStringBase<Type>::insert(const It
         _ptr = tmpPtr;
         return tmpData + position;
     }
-    const auto tmpBegin = begin<false>();
-    const auto tmpEnd = end<false>();
-    if (const auto after = size<false>() - position; after > count) {
+    const auto tmpBegin = beginUnsafe();
+    const auto tmpEnd = endUnsafe();
+    if (const auto after = sizeUnsafe() - position; after > count) {
         std::uninitialized_move(tmpEnd - count, tmpEnd, tmpEnd);
         std::copy(from, to, tmpBegin + position);
     } else {
@@ -179,15 +182,16 @@ Core::FlatStringBase<Type>::Iterator Core::FlatStringBase<Type>::insert(const It
 }
 
 template<typename Type>
-Core::FlatStringBase<Type>::Iterator Core::FlatStringBase<Type>::insert(const Iterator at, const std::size_t count, const Type &value)
+Core::FlatStringBase<Type>::Iterator Core::FlatStringBase<Type>::insert(const Iterator pos, const std::size_t count, const Type &value)
     noexcept(nothrow_copy_constructible(Type) && nothrow_destructible(Type))
+    requires std::copy_constructible<Type>
 {
-    if (at == nullptr) [[unlikely]] {
+    if (pos == nullptr) [[unlikely]] {
         resize(count, value);
         return begin();
     }
-    std::size_t position = at - begin<false>();
-    if (const auto currentSize = size<false>(), total = currentSize + count; total > capacity<false>()) [[unlikely]] {
+    std::size_t position = pos - beginUnsafe();
+    if (const auto currentSize = sizeUnsafe(), total = currentSize + count; total > capacityUnsafe()) [[unlikely]] {
         const auto tmpSize = currentSize + std::max(currentSize, count);
         const auto tmpPtr = reinterpret_cast<Header *>(std::malloc(sizeof(Header) + sizeof(Type) * tmpSize));
         const auto tmpData = reinterpret_cast<Type *>(tmpPtr + 1);
@@ -200,9 +204,9 @@ Core::FlatStringBase<Type>::Iterator Core::FlatStringBase<Type>::insert(const It
         _ptr = tmpPtr;
         return tmpData + position;
     }
-    const auto tmpBegin = begin<false>();
-    const auto tmpEnd = end<false>();
-    if (const auto after = size<false>() - position; after > count) {
+    const auto tmpBegin = beginUnsafe();
+    const auto tmpEnd = endUnsafe();
+    if (const auto after = sizeUnsafe() - position; after > count) {
         std::uninitialized_move(tmpEnd - count, tmpEnd, tmpEnd);
         std::fill_n(tmpBegin + position, count, value);
     } else {
@@ -219,7 +223,7 @@ template<typename Type>
 inline void Core::FlatStringBase<Type>::reserve(const std::size_t count) noexcept_destructible(Type)
 {
     if (_ptr) { [[unlikely]]
-        if (size<false>() != count) [[likely]]
+        if (sizeUnsafe() != count) [[likely]]
             release<false>();
         else [[unlikely]] {
             clear<false>();
@@ -239,7 +243,7 @@ inline void Core::FlatStringBase<Type>::clear(void) noexcept_destructible(Type)
         if (!_ptr) [[unlikely]]
             return;
     }
-    std::destroy_n(begin<false>(), size<false>());
+    std::destroy_n(beginUnsafe(), sizeUnsafe());
 }
 
 template<typename Type>

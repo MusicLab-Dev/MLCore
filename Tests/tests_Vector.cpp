@@ -4,19 +4,19 @@
  */
 #include <gtest/gtest.h>
 
-#include <MLCore/FlatVector.hpp>
+#include <MLCore/Vector.hpp>
 
-TEST(FlatVector, Basics)
+TEST(Vector, Basics)
 {
-    Core::FlatVector<std::size_t> vector(0);
+    Core::Vector<std::size_t> vector(0);
     ASSERT_EQ(vector.size(), 0);
     ASSERT_EQ(vector.capacity(), 0);
 }
 
-TEST(FlatVector, Push)
+TEST(Vector, Push)
 {
     constexpr auto count = 42ul;
-    Core::FlatVector<std::size_t> vector;
+    Core::Vector<std::size_t> vector;
 
     ASSERT_FALSE(vector);
     for (auto i = 0ul; i < count; ++i) {
@@ -45,10 +45,10 @@ TEST(FlatVector, Push)
     ASSERT_EQ(i, count);
 }
 
-TEST(FlatVector, Pop)
+TEST(Vector, Pop)
 {
     constexpr auto count = 42ul;
-    Core::FlatVector<std::size_t> vector(count, 0ul);
+    Core::Vector<std::size_t> vector(count, 0ul);
 
     ASSERT_TRUE(vector);
     ASSERT_EQ(vector.size(), count);
@@ -59,13 +59,13 @@ TEST(FlatVector, Pop)
     ASSERT_EQ(vector.size(), 0);
 }
 
-TEST(FlatVector, Resize)
+TEST(Vector, Resize)
 {
-    constexpr auto str = "FlatVector is an amazing 8 bytes vector !";
+    constexpr auto str = "Vector is an amazing 8 bytes vector !";
     constexpr auto str2 = "Hello";
     constexpr auto count = 4ul;
 
-    Core::FlatVector<std::string> vector(count, str);
+    Core::Vector<std::string> vector(count, str);
     ASSERT_EQ(vector.size(), count);
     ASSERT_EQ(vector.capacity(), count);
     auto i = 0ul;
@@ -92,12 +92,12 @@ TEST(FlatVector, Resize)
         ASSERT_EQ(elem, str);
 }
 
-TEST(FlatVector, Reserve)
+TEST(Vector, Reserve)
 {
-    constexpr auto str = "FlatVector is an amazing 8 bytes vector !";
+    constexpr auto str = "Vector is an amazing 8 bytes vector !";
     constexpr auto count = 4ul;
 
-    Core::FlatVector<std::string> vector;
+    Core::Vector<std::string> vector;
 
     vector.reserve(count);
     ASSERT_EQ(vector.size(), 0);
@@ -110,11 +110,11 @@ TEST(FlatVector, Reserve)
     ASSERT_EQ(vector.capacity(), count);
 }
 
-TEST(FlatVector, InsertIterators)
+TEST(Vector, InsertIterators)
 {
     std::vector<int> tmp(10, 42);
     std::vector<int> tmp2(5, 32);
-    Core::FlatVector<int> vector(tmp.begin(), tmp.end());
+    Core::Vector<int> vector(tmp.begin(), tmp.end());
 
     ASSERT_EQ(vector.size(), 10ul);
     for (auto elem : vector)
@@ -127,9 +127,9 @@ TEST(FlatVector, InsertIterators)
     ASSERT_EQ(vector.back(), 46);
 }
 
-TEST(FlatVector, InsertFill)
+TEST(Vector, InsertFill)
 {
-    Core::FlatVector<int> vector;
+    Core::Vector<int> vector;
 
     vector.insert(vector.begin(), 2, 42);
     ASSERT_EQ(vector.size(), 2);
@@ -144,12 +144,12 @@ TEST(FlatVector, InsertFill)
         ASSERT_EQ(vector[i], 32);
 }
 
-TEST(FlatVector, Clear)
+TEST(Vector, Clear)
 {
     constexpr auto count = 42;
     constexpr auto value1 = 24;
     constexpr auto value2 = 42;
-    Core::FlatVector<int> vector(count, value1);
+    Core::Vector<int> vector(count, value1);
     auto *data = vector.data();
     for (auto i = 0u; i < count; ++i)
         ASSERT_EQ(data[i], value1);
@@ -162,12 +162,12 @@ TEST(FlatVector, Clear)
     ASSERT_NE(vector.data(), data);
 }
 
-TEST(FlatVector, Erase)
+TEST(Vector, Erase)
 {
     constexpr auto count = 10;
 
     constexpr auto Get = [] {
-        Core::FlatVector<int> vector(count);
+        Core::Vector<int> vector(count);
         for (auto i = 0; i < count; ++i)
             vector[i] = i;
         return vector;

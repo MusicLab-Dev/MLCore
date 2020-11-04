@@ -3,176 +3,110 @@
  * @ Description: FlatVector
  */
 
+/**
+ * @ Author: Matthieu Moinvaziri
+ * @ Description: Vector
+ */
+
 #pragma once
 
-#include <memory>
-#include <cstdlib>
-
-#include "Utils.hpp"
+#include "VectorDetails.hpp"
 
 namespace Core
 {
-    template<typename Type>
-    class FlatVector;
+    namespace Internal
+    {
+        template<typename Type, typename Range>
+        class FlatVectorBase;
+    }
+
+    template<typename Type, typename Range = std::size_t>
+    using FlatVector = Internal::VectorDetails<Internal::FlatVectorBase<Type, Range>, Type, Range>;
 }
 
-/** @brief Flat vector is pointer-sized vector alternative
- * The implementation has same performances as std::vector but comes with a single weakness :
- * Because the size and capacity are stored on the heap if you wish to get the vector size and not lookup after that
- * it is slower due to memory indirection
-*/
-template<typename Type>
-class Core::FlatVector
+/** @brief Base implementation of a vector with size and capacity allocated with data */
+template<typename Type, typename Range>
+class Core::Internal::FlatVectorBase
 {
 public:
-    struct alignas(sizeof(Type) <= 16 ? 16 : 64) Header
-    {
-        std::size_t size { 0 };
-        std::size_t capacity { 0 };
-    };
-
-    /** @brief Iterators */
+    /** @brief Output iterator */
     using Iterator = Type *;
+
+    /** @brief Input iterator */
     using ConstIterator = const Type *;
 
-    /** @brief Default constructor */
-    FlatVector(void) noexcept = default;
 
-    /** @brief Copy constructor */
-    FlatVector(const FlatVector &other) noexcept_copy_constructible(Type) { resize(other.begin(), other.end()); }
+    /** @brief Vector header, aligned to either sizeof(Range) * 2 or size of a cacheline depending on Type size */
+    struct alignas(sizeof(Type) <= sizeof(Range) * 2 ? sizeof(Range) * 2 : Core::Utils::CacheLineSize) Header
+    {
+        Range size {};
+        Range capacity {};
+    };
 
-    /** @brief Move constructor */
-    FlatVector(FlatVector &&other) noexcept { swap(other); }
 
-    /** @brief Insert constructor */
-    template<typename InputIterator>
-    FlatVector(const InputIterator from, const InputIterator to)
-        noexcept(nothrow_forward_constructible(Type) && nothrow_destructible(Type))
-        { resize(from, to); }
+    /** @brief Fast empty check */
+    [[nodiscard]] bool empty(void) const noexcept { return !_ptr || !sizeUnsafe(); }
 
-    /** @brief Resize with default constructor */
-    FlatVector(const std::size_t count)
-        noexcept(nothrow_constructible(Type) && nothrow_destructible(Type))
-        { resize(count); }
 
-    /** @brief Resize with copy constructor */
-    FlatVector(const std::size_t count, const Type &value)
-        noexcept(nothrow_copy_constructible(Type) && nothrow_destructible(Type))
-        { resize(count, value); }
+    /** @brief Get internal data pointer */
+    [[nodiscard]] Type *data(void) noexcept { return _ptr ? dataUnsafe() : nullptr; }
+    [[nodiscard]] const Type *data(void) const noexcept { return _ptr ? dataUnsafe() : nullptr; }
+    [[nodiscard]] Type *dataUnsafe(void) noexcept { return reinterpret_cast<Type *>(_ptr + 1); }
+    [[nodiscard]] const Type *dataUnsafe(void) const noexcept { return reinterpret_cast<const Type *>(_ptr + 1); }
 
-    /** @brief Initializer list constructor */
-    FlatVector(std::initializer_list<Type> init) noexcept_forward_constructible(Type)
-        : FlatVector(init.begin(), init.end()) {}
+    /** @brief Get the size of the vector */
+    [[nodiscard]] Range size(void) const noexcept { return _ptr ? sizeUnsafe() : Range(); }
+    [[nodiscard]] Range sizeUnsafe(void) const noexcept { return _ptr->size; }
 
-    /** @brief Destroy constructor */
-    ~FlatVector(void) noexcept_destructible(Type) { release(); }
+    /** @brief Get the capacity of the vector */
+    [[nodiscard]] Range capacity(void) const noexcept { return _ptr ? capacityUnsafe() : Range(); }
+    [[nodiscard]] Range capacityUnsafe(void) const noexcept { return _ptr->capacity; }
 
-    /** @brief Copy assignment */
-    FlatVector &operator=(const FlatVector &other) noexcept_copy_constructible(Type) { resize(other.begin(), other.end()); return *this; }
 
-    /** @brief Move assignment */
-    FlatVector &operator=(FlatVector &&other) noexcept { swap(other); return *this; }
+    /** @brief Begin / end overloads */
+    [[nodiscard]] Iterator begin(void) noexcept { return _ptr ? beginUnsafe() : Iterator(); }
+    [[nodiscard]] Iterator end(void) noexcept { return _ptr ? endUnsafe() : Iterator(); }
+    [[nodiscard]] ConstIterator begin(void) const noexcept { return _ptr ? beginUnsafe() : ConstIterator(); }
+    [[nodiscard]] ConstIterator end(void) const noexcept { return _ptr ? endUnsafe() : ConstIterator(); }
+
 
     /** @brief Swap two instances */
-    void swap(FlatVector &other) noexcept { std::swap(_ptr, other._ptr); }
+    void swap(FlatVectorBase &other) noexcept { std::swap(_ptr, other._ptr); }
 
-    /** @brief Get raw data pointer */
-    [[nodiscard]] Type *data(void) noexcept { return reinterpret_cast<Type *>(_ptr + 1); }
-    [[nodiscard]] const Type *data(void) const noexcept { return reinterpret_cast<const Type *>(_ptr + 1); }
+protected:
+    /** @brief Check if the instance is safe to access */
+    [[nodiscard]] bool isSafe(void) const noexcept { return _ptr; }
 
-    /** @brief Access an element of the vector */
-    [[nodiscard]] Type &at(const std::size_t index) noexcept { return data()[index]; }
-    [[nodiscard]] const Type &at(const std::size_t index) const noexcept { return data()[index]; }
-    [[nodiscard]] Type &operator[](const std::size_t index) noexcept { return at(index); }
-    [[nodiscard]] const Type &operator[](const std::size_t index) const noexcept { return at(index); }
+    /** @brief Protected data setter */
+    void setData(Type * const data) noexcept { _ptr = reinterpret_cast<Header *>(data) - 1; }
 
-    /** @brief Fast check if vector contains data */
-    [[nodiscard]] bool empty(void) const noexcept { return !_ptr || !_ptr->size; }
-    operator bool(void) const noexcept { return !empty(); }
+    /** @brief Protected size setter */
+    void setSize(const Range size) noexcept { _ptr->size = size; }
 
-    /** @brief Get size of vector */
-    template<bool SafeCheck = true>
-    [[nodiscard]] std::size_t size(void) const noexcept;
+    /** @brief Protected capacity setter */
+    void setCapacity(const Range capacity) noexcept { _ptr->capacity = capacity; }
 
-    /** @brief Get capacity of vector */
-    template<bool SafeCheck = true>
-    [[nodiscard]] std::size_t capacity(void) const noexcept;
 
-    /** @brief Begin / end iterators */
-    template<bool SafeCheck = true>
-    [[nodiscard]] Iterator begin(void) noexcept;
-    template<bool SafeCheck = true>
-    [[nodiscard]] ConstIterator begin(void) const noexcept;
-    template<bool SafeCheck = true>
-    [[nodiscard]] ConstIterator cbegin(void) const noexcept { return begin<SafeCheck>(); }
-    template<bool SafeCheck = true>
-    [[nodiscard]] Iterator end(void) noexcept;
-    template<bool SafeCheck = true>
-    [[nodiscard]] ConstIterator end(void) const noexcept;
-    template<bool SafeCheck = true>
-    [[nodiscard]] ConstIterator cend(void) const noexcept { return end<SafeCheck>(); }
+    /** @brief Unsafe begin / end overloads */
+    [[nodiscard]] Iterator beginUnsafe(void) noexcept { return data(); }
+    [[nodiscard]] Iterator endUnsafe(void) noexcept { return data() + sizeUnsafe(); }
+    [[nodiscard]] ConstIterator beginUnsafe(void) const noexcept { return data(); }
+    [[nodiscard]] ConstIterator endUnsafe(void) const noexcept { return data() + sizeUnsafe(); }
 
-    /** @brief Front / Back getters */
-    Type &front(void) noexcept { return at(0); }
-    const Type &front(void) const noexcept { return at(0); }
-    Type &back(void) noexcept { return at(size<false>() - 1); }
-    const Type &back(void) const noexcept { return at(size<false>() - 1); }
 
-    /** @brief Push an element into the vector */
-    template<typename ...Args>
-    Type &push(Args &&...args)
-        noexcept(nothrow_constructible(Type, Args...) && nothrow_destructible(Type));
+    /** @brief Allocates a new buffer */
+    [[nodiscard]] Type *allocate(const Range capacity) noexcept
+        { return reinterpret_cast<Type *>(reinterpret_cast<Header *>(std::malloc(sizeof(Header) + sizeof(Type) * capacity)) + 1); }
 
-    /** @brief Push the last element of the vector */
-    void pop(void) noexcept_destructible(Type);
-
-    /** @brief Insert an initializer list */
-    Iterator insert(const Iterator at, std::initializer_list<Type> &&init)
-        noexcept(nothrow_forward_constructible(Type) && nothrow_destructible(Type))
-        { return insert(at, init.begin(), init.end()); }
-
-    /** @brief Insert a range of element by iterating over iterators */
-    template<typename InputIterator>
-    Iterator insert(const Iterator at, const InputIterator from, const InputIterator to)
-        noexcept(nothrow_forward_constructible(Type) && nothrow_destructible(Type));
-
-    /** @brief Insert a range of copies */
-    Iterator insert(const Iterator at, const std::size_t count, const Type &value)
-        noexcept(nothrow_copy_constructible(Type) && nothrow_destructible(Type));
-
-    /** @brief Resize the vector using default constructor to initialize each element */
-    void resize(const std::size_t count)
-        noexcept(nothrow_constructible(Type) && nothrow_destructible(Type));
-
-    /** @brief Resize the vector by copying given element */
-    void resize(const std::size_t count, const Type &type)
-        noexcept(nothrow_copy_constructible(Type) && nothrow_destructible(Type));
-
-    /** @brief Resize the vector with input iterators */
-    template<typename InputIterator>
-    void resize(const InputIterator from, const InputIterator to)
-        noexcept(nothrow_destructible(Type) && nothrow_forward_iterator_constructible(InputIterator));
-
-    /** @brief Reserve memory for fast emplace */
-    void reserve(const std::size_t count) noexcept_destructible(Type);
-
-    /** @brief Clear the vector */
-    template<bool SafeCheck = true>
-    void clear(void) noexcept_destructible(Type);
-
-    /** @brief Clear vector and release memory */
-    template<bool SafeCheck = true>
-    void release(void) noexcept_destructible(Type);
+    /** @brief Deallocates a buffer */
+    [[nodiscard]] void deallocate(Type *data) noexcept
+        { std::free(reinterpret_cast<Header *>(data) - 1); }
 
 private:
     Header *_ptr { nullptr };
-
-    /** @brief Grow the vector */
-    void grow(const std::size_t minimum = 0) noexcept(nothrow_forward_constructible(Type) && nothrow_destructible(Type));
 };
 
-#include "FlatVector.ipp"
-
-static_assert(sizeof(Core::FlatVector<int>::Header) == 16);
-static_assert(sizeof(Core::FlatVector<std::array<char, 16>>::Header) == 16);
-static_assert(sizeof(Core::FlatVector<std::array<char, 17>>::Header) == 64);
+static_assert(sizeof(Core::FlatVector<char[8], std::uint32_t>::Header) == 8);
+static_assert(sizeof(Core::FlatVector<char[9], std::uint32_t>::Header) == 64);
+static_assert(sizeof(Core::FlatVector<char[16], std::size_t>::Header) == 16);
+static_assert(sizeof(Core::FlatVector<char[17], std::size_t>::Header) == 64);
