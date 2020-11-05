@@ -106,9 +106,9 @@ public:
 private:
     [[nodiscard]] static std::size_t SafeStrlen(const char * const cstring) noexcept
     {
-        if (!cstring) [[unlikely]]
+        if (!cstring)
             return 0;
-        else [[likely]]
+        else
             return std::strlen(cstring);
     }
 };

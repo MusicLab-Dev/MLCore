@@ -8,9 +8,9 @@ template<bool SafeCheck>
 inline Core::FlatStringBase<Type>::Iterator Core::FlatStringBase<Type>::begin(void) noexcept
 {
     if constexpr (SafeCheck) {
-        if (_ptr) [[likely]]
+        if (_ptr)
             return data();
-        else [[unlikely]]
+        else
             return nullptr;
     } else
         return data();
@@ -21,9 +21,9 @@ template<bool SafeCheck>
 inline Core::FlatStringBase<Type>::ConstIterator Core::FlatStringBase<Type>::begin(void) const noexcept
 {
     if constexpr (SafeCheck) {
-        if (_ptr) [[likely]]
+        if (_ptr)
             return data();
-        else [[unlikely]]
+        else
             return nullptr;
     } else
         return data();
@@ -34,9 +34,9 @@ template<bool SafeCheck>
 inline Core::FlatStringBase<Type>::Iterator Core::FlatStringBase<Type>::end(void) noexcept
 {
     if constexpr (SafeCheck) {
-        if (_ptr) [[likely]]
+        if (_ptr)
             return data() + _ptr->size;
-        else [[unlikely]]
+        else
             return nullptr;
     } else
         return data() + _ptr->size;
@@ -47,9 +47,9 @@ template<bool SafeCheck>
 inline Core::FlatStringBase<Type>::ConstIterator Core::FlatStringBase<Type>::end(void) const noexcept
 {
     if constexpr (SafeCheck) {
-        if (_ptr) [[likely]]
+        if (_ptr)
             return data() + _ptr->size;
-        else [[unlikely]]
+        else
             return nullptr;
     } else
         return data() + _ptr->size;
@@ -60,9 +60,9 @@ template<bool SafeCheck>
 inline std::size_t Core::FlatStringBase<Type>::size(void) const noexcept
 {
     if constexpr (SafeCheck) {
-        if (_ptr) [[likely]]
+        if (_ptr)
             return _ptr->size;
-        else [[unlikely]]
+        else
             return 0;
     } else
         return _ptr->size;
@@ -73,9 +73,9 @@ template<bool SafeCheck>
 inline std::size_t Core::FlatStringBase<Type>::capacity(void) const noexcept
 {
     if constexpr (SafeCheck) {
-        if (_ptr) [[likely]]
+        if (_ptr)
             return _ptr->capacity;
-        else [[unlikely]]
+        else
             return 0;
     } else
         return _ptr->capacity;
@@ -86,9 +86,9 @@ template<typename ...Args>
 inline void Core::FlatStringBase<Type>::push(Args &&...args)
     noexcept(nothrow_constructible(Type, Args...) && nothrow_destructible(Type))
 {
-    if (!_ptr) [[unlikely]]
+    if (!_ptr)
         reserve(2);
-    else if (_ptr->size == _ptr->capacity) [[unlikely]]
+    else if (_ptr->size == _ptr->capacity)
         grow();
     new (&at(_ptr->size)) Type(std::forward<Args>(args)...);
     ++_ptr->size;
@@ -105,9 +105,9 @@ template<typename Type>
 inline void Core::FlatStringBase<Type>::resize(const std::size_t count)
     noexcept(nothrow_constructible(Type) && nothrow_destructible(Type))
 {
-    if (!_ptr || _ptr->capacity < count) [[likely]]
+    if (!_ptr || _ptr->capacity < count)
         reserve(count);
-    else [[unlikely]]
+    else
         clear();
     _ptr->size = count;
     std::uninitialized_default_construct_n(data(), count);
@@ -117,9 +117,9 @@ template<typename Type>
 inline void Core::FlatStringBase<Type>::resize(const std::size_t count, const Type &value)
     noexcept(nothrow_copy_constructible(Type) && nothrow_destructible(Type))
 {
-    if (!_ptr || _ptr->capacity < count) [[likely]]
+    if (!_ptr || _ptr->capacity < count)
         reserve(count);
-    else [[unlikely]]
+    else
         clear();
     _ptr->size = count;
     std::uninitialized_fill_n(data(), count, value);
@@ -144,12 +144,12 @@ Core::FlatStringBase<Type>::Iterator Core::FlatStringBase<Type>::insert(const It
 {
     const auto count { static_cast<std::size_t>(std::distance(from, to)) };
     std::size_t position;
-    if (at == nullptr) [[unlikely]] {
+    if (at == nullptr) {
         reserve(count);
         position = 0;
     } else
         position = pos - beginUnsafe();
-    if (const auto currentSize = sizeUnsafe(), total = currentSize + count; total > capacityUnsafe()) [[unlikely]] {
+    if (const auto currentSize = sizeUnsafe(), total = currentSize + count; total > capacityUnsafe()) {
         const auto tmpSize = currentSize + std::max(currentSize, count);
         const auto tmpPtr = reinterpret_cast<Header *>(std::malloc(sizeof(Header) + sizeof(Type) * tmpSize));
         const auto tmpData = reinterpret_cast<Type *>(tmpPtr + 1);
@@ -182,12 +182,12 @@ template<typename Type>
 Core::FlatStringBase<Type>::Iterator Core::FlatStringBase<Type>::insert(const Iterator pos, const std::size_t count, const Type &value)
     noexcept(nothrow_copy_constructible(Type) && nothrow_destructible(Type))
 {
-    if (pos == nullptr) [[unlikely]] {
+    if (pos == nullptr) {
         resize(count, value);
         return begin();
     }
     std::size_t position = pos - beginUnsafe();
-    if (const auto currentSize = sizeUnsafe(), total = currentSize + count; total > capacityUnsafe()) [[unlikely]] {
+    if (const auto currentSize = sizeUnsafe(), total = currentSize + count; total > capacityUnsafe()) {
         const auto tmpSize = currentSize + std::max(currentSize, count);
         const auto tmpPtr = reinterpret_cast<Header *>(std::malloc(sizeof(Header) + sizeof(Type) * tmpSize));
         const auto tmpData = reinterpret_cast<Type *>(tmpPtr + 1);
@@ -218,10 +218,10 @@ Core::FlatStringBase<Type>::Iterator Core::FlatStringBase<Type>::insert(const It
 template<typename Type>
 inline void Core::FlatStringBase<Type>::reserve(const std::size_t count) noexcept_destructible(Type)
 {
-    if (_ptr) { [[unlikely]]
-        if (sizeUnsafe() != count) [[likely]]
+    if (_ptr) {
+        if (sizeUnsafe() != count)
             release<false>();
-        else [[unlikely]] {
+        else {
             clear<false>();
             return;
         }
@@ -236,7 +236,7 @@ template<bool SafeCheck>
 inline void Core::FlatStringBase<Type>::clear(void) noexcept_destructible(Type)
 {
     if constexpr (SafeCheck) {
-        if (!_ptr) [[unlikely]]
+        if (!_ptr)
             return;
     }
     std::destroy_n(beginUnsafe(), sizeUnsafe());
@@ -247,7 +247,7 @@ template<bool SafeCheck>
 inline void Core::FlatStringBase<Type>::release(void) noexcept_destructible(Type)
 {
     if constexpr (SafeCheck) {
-        if (!_ptr) [[unlikely]]
+        if (!_ptr)
             return;
     }
     clear<false>();

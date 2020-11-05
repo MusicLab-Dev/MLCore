@@ -8,9 +8,9 @@ template<typename ...Args>
 inline Type &Core::Internal::VectorDetails<Base, Type, Range>::push(Args &&...args)
     noexcept(std::is_nothrow_constructible_v<Type, Args...> && nothrow_destructible(Type))
 {
-    if (!data()) [[unlikely]]
+    if (!data())
         reserve(2);
-    else if (sizeUnsafe() == capacityUnsafe()) [[unlikely]]
+    else if (sizeUnsafe() == capacityUnsafe())
         grow();
     const auto currentSize = sizeUnsafe();
     Type * const elem = dataUnsafe() + currentSize;
@@ -37,15 +37,15 @@ inline std::enable_if_t<std::is_constructible_v<Type, decltype(*std::declval<Inp
     const std::size_t count = std::distance(from, to);
     std::size_t position;
 
-    if (!count) [[unlikely]]
+    if (!count)
         return end();
-    else if (pos == Iterator()) [[unlikely]] {
+    else if (pos == Iterator()) {
         reserve(count);
         position = 0;
-    } else [[likely]]
+    } else
         position = pos - beginUnsafe();
     const auto currentSize = sizeUnsafe();
-    if (const auto currentCapacity = capacityUnsafe(), total = currentSize + count; total > currentCapacity) [[unlikely]] {
+    if (const auto currentCapacity = capacityUnsafe(), total = currentSize + count; total > currentCapacity) {
         const auto currentData = dataUnsafe();
         const auto desiredCapacity = currentCapacity + std::max(currentCapacity, count);
         const auto tmpData = allocate(desiredCapacity);
@@ -79,9 +79,9 @@ inline typename Core::Internal::VectorDetails<Base, Type, Range>::Iterator
     Core::Internal::VectorDetails<Base, Type, Range>::insert(const Iterator pos, const std::size_t count, const Type &value)
     noexcept(nothrow_copy_constructible(Type) && nothrow_destructible(Type))
 {
-    if (!count) [[unlikely]]
+    if (!count)
         return end();
-    else if (pos == nullptr) [[unlikely]] {
+    else if (pos == nullptr) {
         resize(count, value);
         return beginUnsafe();
     }
@@ -89,7 +89,7 @@ inline typename Core::Internal::VectorDetails<Base, Type, Range>::Iterator
     const auto currentBegin = beginUnsafe();
     const auto currentEnd = endUnsafe();
     const auto currentSize = sizeUnsafe();
-    if (const auto currentCapacity = capacityUnsafe(), total = currentSize + count; total > currentCapacity) [[unlikely]] {
+    if (const auto currentCapacity = capacityUnsafe(), total = currentSize + count; total > currentCapacity) {
         const auto desiredCapacity = currentCapacity + std::max(currentCapacity, count);
         const auto tmpData = allocate(desiredCapacity);
         std::uninitialized_move_n(currentBegin, position, tmpData);
@@ -117,7 +117,7 @@ template<typename Base, typename Type, typename Range>
 inline void Core::Internal::VectorDetails<Base, Type, Range>::erase(const Iterator from, const Iterator to)
     noexcept(nothrow_forward_constructible(Type) && nothrow_destructible(Type))
 {
-    if (from == to) [[unlikely]]
+    if (from == to)
         return;
     const auto end = endUnsafe();
     setSize(sizeUnsafe() - std::distance(from, to));
@@ -132,14 +132,14 @@ template<typename Base, typename Type, typename Range>
 inline void Core::Internal::VectorDetails<Base, Type, Range>::resize(const std::size_t count)
     noexcept(std::is_nothrow_constructible_v<Type> && nothrow_destructible(Type))
 {
-    if (!count) [[unlikely]] {
+    if (!count) {
         clear();
         return;
-    } else if (!data()) [[likely]]
+    } else if (!data())
         reserveUnsafe<false>(count);
     else if (capacityUnsafe() < count)
         reserveUnsafe<true>(count);
-    else [[unlikely]]
+    else
         clearUnsafe();
     setSize(count);
     std::uninitialized_default_construct_n(data(), count);
@@ -149,14 +149,14 @@ template<typename Base, typename Type, typename Range>
 inline void Core::Internal::VectorDetails<Base, Type, Range>::resize(const std::size_t count, const Type &value)
     noexcept(nothrow_copy_constructible(Type) && nothrow_destructible(Type))
 {
-    if (!count) [[unlikely]] {
+    if (!count) {
         clear();
         return;
-    } else if (!data()) [[likely]]
+    } else if (!data())
         reserveUnsafe<false>(count);
     else if (capacityUnsafe() < count)
         reserveUnsafe<true>(count);
-    else [[unlikely]]
+    else
         clearUnsafe();
     setSize(count);
     std::uninitialized_fill_n(data(), count, value);
@@ -170,14 +170,14 @@ inline std::enable_if_t<std::is_constructible_v<Type, decltype(*std::declval<Inp
 {
     const std::size_t count = std::distance(from, to);
 
-    if (!count) [[unlikely]] {
+    if (!count) {
         clear();
         return;
-    } else if (!data()) [[likely]]
+    } else if (!data())
         reserveUnsafe<false>(count);
     else if (capacityUnsafe() < count)
         reserveUnsafe<true>(count);
-    else [[unlikely]]
+    else
         clearUnsafe();
     setSize(count);
     std::uninitialized_copy(from, to, beginUnsafe());
@@ -186,7 +186,7 @@ inline std::enable_if_t<std::is_constructible_v<Type, decltype(*std::declval<Inp
 template<typename Base, typename Type, typename Range>
 inline void Core::Internal::VectorDetails<Base, Type, Range>::clear(void) noexcept_destructible(Type)
 {
-    if (data()) [[likely]]
+    if (data())
         clearUnsafe();
 }
 
@@ -200,7 +200,7 @@ inline void Core::Internal::VectorDetails<Base, Type, Range>::clearUnsafe(void) 
 template<typename Base, typename Type, typename Range>
 inline void Core::Internal::VectorDetails<Base, Type, Range>::release(void) noexcept_destructible(Type)
 {
-    if (data()) [[likely]]
+    if (data())
         releaseUnsafe();
 }
 
@@ -229,7 +229,7 @@ inline bool Core::Internal::VectorDetails<Base, Type, Range>::reserveUnsafe(cons
     noexcept(nothrow_forward_constructible(Type) && nothrow_destructible(Type))
 {
     if constexpr (IsSafe) {
-        if (capacityUnsafe() >= capacity) [[unlikely]]
+        if (capacityUnsafe() >= capacity)
             return false;
         const auto currentSize = sizeUnsafe();
         const auto currentData = dataUnsafe();
