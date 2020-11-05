@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <cstdlib>
+
 #include "VectorDetails.hpp"
 
 namespace Core

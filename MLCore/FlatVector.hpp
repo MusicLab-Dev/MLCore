@@ -3,12 +3,9 @@
  * @ Description: FlatVector
  */
 
-/**
- * @ Author: Matthieu Moinvaziri
- * @ Description: Vector
- */
-
 #pragma once
+
+#include <cstdlib>
 
 #include "VectorDetails.hpp"
 
