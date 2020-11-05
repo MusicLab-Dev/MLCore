@@ -52,10 +52,10 @@ inline std::enable_if_t<std::is_constructible_v<Type, decltype(*std::declval<Inp
         std::uninitialized_move_n(currentData, position, tmpData);
         std::uninitialized_move_n(currentData + position, count, tmpData + position + count);
         std::copy(from, to, tmpData + position);
-        deallocate(currentData);
         setData(tmpData);
         setSize(total);
         setCapacity(desiredCapacity);
+        deallocate(currentData);
         return tmpData + position;
     }
     const auto currentBegin = beginUnsafe();
@@ -95,10 +95,10 @@ inline typename Core::Internal::VectorDetails<Base, Type, Range>::Iterator
         std::uninitialized_move_n(currentBegin, position, tmpData);
         std::uninitialized_move(currentBegin + position, currentEnd, tmpData + position + count);
         std::fill_n(tmpData + position, count, value);
-        deallocate(data());
         setData(tmpData);
         setSize(total);
         setCapacity(desiredCapacity);
+        deallocate(currentBegin);
         return tmpData + position;
     } else if (const auto after = sizeUnsafe() - position; after > count) {
         std::uninitialized_move(currentEnd - count, currentEnd, currentEnd);
@@ -207,10 +207,12 @@ inline void Core::Internal::VectorDetails<Base, Type, Range>::release(void) noex
 template<typename Base, typename Type, typename Range>
 inline void Core::Internal::VectorDetails<Base, Type, Range>::releaseUnsafe(void) noexcept_destructible(Type)
 {
+    const auto currentData = dataUnsafe();
+
     clearUnsafe();
-    deallocate(dataUnsafe());
     setCapacity(0);
     setData(nullptr);
+    deallocate(currentData);
 }
 
 template<typename Base, typename Type, typename Range>
@@ -236,10 +238,10 @@ inline bool Core::Internal::VectorDetails<Base, Type, Range>::reserveUnsafe(cons
         const auto tmpData = allocate(capacity);
         std::uninitialized_move_n(currentData, currentSize, tmpData);
         std::destroy_n(currentData, currentSize);
-        deallocate(currentData);
         setData(tmpData);
         setSize(currentSize);
         setCapacity(capacity);
+        deallocate(currentData);
         return true;
     } else {
         setData(allocate(capacity));
@@ -261,8 +263,8 @@ inline void Core::Internal::VectorDetails<Base, Type, Range>::grow(const Range m
 
     std::uninitialized_move_n(currentData, currentSize, tmpData);
     std::destroy_n(currentData, currentSize);
-    deallocate(currentData);
     setData(tmpData);
     setSize(currentSize);
     setCapacity(desiredCapacity);
+    deallocate(currentData);
 }
