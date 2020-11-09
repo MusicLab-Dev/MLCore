@@ -6,6 +6,7 @@ set(MLCoreTestsSources
     ${MLCoreTestsDir}/tests_Vector.cpp
     ${MLCoreTestsDir}/tests_FlatVector.cpp
     ${MLCoreTestsDir}/tests_FlatString.cpp
+    ${MLCoreTestsDir}/tests_UniqueAlloc.cpp
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${MLCoreTestsSources})
