@@ -8,14 +8,16 @@
 #include <memory>
 #include <memory_resource>
 
+#include "Utils.hpp"
+
 namespace Core
 {
-    template<typename Type>
+    template<typename Type, typename Allocator>
     class UniqueAlloc;
 }
 
 /** @brief This class provide instances of a types allocated within a shared static allocator */
-template<typename Type, typename Allocator = std::pmr::polymorphic_allocator>
+template<typename Type, typename Allocator = std::pmr::unsynchronized_pool_resource>
 class Core::UniqueAlloc
 {
 public:
@@ -25,7 +27,7 @@ public:
         void operator()(Type *data)
         {
             data->~Type();
-            _Allocator.deallocate(data);
+            _Allocator.deallocate(data, sizeof(Type), alignof(Type));
         }
     };
 
@@ -38,7 +40,8 @@ public:
 
     /** @brief Allocate constructor */
     template<typename ...Args>
-    UniqueAlloc(Args &&...args) noexcept_constructible(Type, Args...);
+    UniqueAlloc(Args &&...args) noexcept_constructible(Type, Args...)
+        : _data(new (_Allocator.allocate(sizeof(Type), alignof(Type))) Type(std::forward<Args>(args)...)) {}
 
     /** @brief Destructor */
     ~UniqueAlloc(void) noexcept_destructible(Type) = default;
@@ -51,8 +54,8 @@ public:
 
 
     /** @brief Instance getter */
-    [[nodiscard]] Type *get(void) noexcept { return get(); }
-    [[nodiscard]] const Type *get(void) const noexcept { return get(); }
+    [[nodiscard]] Type *get(void) noexcept { return _data.get(); }
+    [[nodiscard]] const Type *get(void) const noexcept { return _data.get(); }
 
     /** @brief Access operator */
     [[nodiscard]] Type *operator->(void) noexcept { return get(); }
