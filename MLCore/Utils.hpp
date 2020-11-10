@@ -36,8 +36,8 @@
 #define noexcept_expr(Expression) noexcept(nothrow_expr(Expression))
 
 /** @brief Align a variable / structure to cacheline size */
-#define CORE_ALIGN_CACHELINE alignas(Core::Utils::CacheLineSize)
-#define CORE_ALIGN_CACHELINE2 alignas(Core::Utils::CacheLineSize * 2)
+#define CORE_ALIGN_CACHELINE alignas(Core::CacheLineSize)
+#define CORE_ALIGN_CACHELINE2 alignas(Core::CacheLineSize * 2)
 
 /** @brief Compile-time ternary expression */
 #define ConstexprTernary(condition, body, elseBody) [] { if constexpr (condition) { return body; } else { return elseBody; } }()
@@ -48,77 +48,79 @@
 /** @brief Compile-time ternary expression with runtime copy capture */
 #define ConstexprTernaryCopy(condition, body, elseBody) [=] { if constexpr (condition) { return body; } else { return elseBody; } }()
 
-namespace Core::Utils
+namespace Core
 {
     /** @brief Theorical cacheline size */
     constexpr std::size_t CacheLineSize = 64ul;
 
-
-    /** @brief Helper to know if a given type is a std::move_iterator */
-    template<typename Type>
-    struct IsMoveIterator;
-
-    /** @brief Helper that match non-move iterators */
-    template<typename Type>
-    struct IsMoveIterator
+    namespace Utils
     {
-        static constexpr bool Value = false;
-    };
+        /** @brief Helper to know if a given type is a std::move_iterator */
+        template<typename Type>
+        struct IsMoveIterator;
 
-    /** @brief Helper that match move iterators */
-    template<typename Iterator>
-    struct IsMoveIterator<std::move_iterator<Iterator>> : public IsMoveIterator<Iterator>
-    {
-        static constexpr bool Value = true;
-    };
+        /** @brief Helper that match non-move iterators */
+        template<typename Type>
+        struct IsMoveIterator
+        {
+            static constexpr bool Value = false;
+        };
 
-    /** @brief Helper that match reverse iterators */
-    template<typename Iterator>
-    struct IsMoveIterator<std::reverse_iterator<Iterator>> : public IsMoveIterator<Iterator>
-    {};
+        /** @brief Helper that match move iterators */
+        template<typename Iterator>
+        struct IsMoveIterator<std::move_iterator<Iterator>> : public IsMoveIterator<Iterator>
+        {
+            static constexpr bool Value = true;
+        };
 
-    static_assert(IsMoveIterator<std::move_iterator<void *>>::Value, "IsMoveIterator not working");
-    static_assert(IsMoveIterator<std::reverse_iterator<std::move_iterator<void *>>>::Value, "IsMoveIterator not working");
-    static_assert(!IsMoveIterator<std::reverse_iterator<void *>>::Value, "IsMoveIterator not working");
-    static_assert(!IsMoveIterator<void *>::Value, "IsMoveIterator not working");
+        /** @brief Helper that match reverse iterators */
+        template<typename Iterator>
+        struct IsMoveIterator<std::reverse_iterator<Iterator>> : public IsMoveIterator<Iterator>
+        {};
+
+        static_assert(IsMoveIterator<std::move_iterator<void *>>::Value, "IsMoveIterator not working");
+        static_assert(IsMoveIterator<std::reverse_iterator<std::move_iterator<void *>>>::Value, "IsMoveIterator not working");
+        static_assert(!IsMoveIterator<std::reverse_iterator<void *>>::Value, "IsMoveIterator not working");
+        static_assert(!IsMoveIterator<void *>::Value, "IsMoveIterator not working");
 
 
-    /** @brief Default type used when a detection fails */
-    struct NoneSuch {};
+        /** @brief Default type used when a detection fails */
+        struct NoneSuch {};
 
-    /** @brief Detector detected invalid expression */
-    template<typename Default, typename AlwaysVoid, template<typename...> typename _Op, typename... _Args>
-    struct Detector
-    {
-        using Value = std::false_type;
-        using Type = Default;
-    };
+        /** @brief Detector detected invalid expression */
+        template<typename Default, typename AlwaysVoid, template<typename...> typename _Op, typename... _Args>
+        struct Detector
+        {
+            using Value = std::false_type;
+            using Type = Default;
+        };
 
-    /** @brief Detector detected valid expression */
-    template<typename Default, template<typename...> typename Op, typename... Args>
-    struct Detector<Default, std::void_t<Op<Args...>>, Op, Args...>
-    {
-        using Value = std::true_type;
-        using Type = Op<Args...>;
-    };
+        /** @brief Detector detected valid expression */
+        template<typename Default, template<typename...> typename Op, typename... Args>
+        struct Detector<Default, std::void_t<Op<Args...>>, Op, Args...>
+        {
+            using Value = std::true_type;
+            using Type = Op<Args...>;
+        };
 
-    /** @brief Boolean that indicate if detector detected a valid expression or not */
-    template<template<typename...> class Op, typename... Args>
-    constexpr bool IsDetected = Detector<NoneSuch, void, Op, Args...>::Value::value;
+        /** @brief Boolean that indicate if detector detected a valid expression or not */
+        template<template<typename...> class Op, typename... Args>
+        constexpr bool IsDetected = Detector<NoneSuch, void, Op, Args...>::Value::value;
 
-    /** @brief Type of the detected expression, if the detection failed returns NoneSuch */
-    template<template<typename...> class Op, typename... Args>
-    using DetectedType = typename Detector<NoneSuch, void, Op, Args...>::Type;
+        /** @brief Type of the detected expression, if the detection failed returns NoneSuch */
+        template<template<typename...> class Op, typename... Args>
+        using DetectedType = typename Detector<NoneSuch, void, Op, Args...>::Type;
 
-    /** @brief Type of the detected expression, if the detection failed returns NoneSuch */
-    template<typename Default, template<typename...> class Op, typename... Args>
-    using DetectedOrType = typename Detector<Default, void, Op, Args...>::Type;
+        /** @brief Type of the detected expression, if the detection failed returns NoneSuch */
+        template<typename Default, template<typename...> class Op, typename... Args>
+        using DetectedOrType = typename Detector<Default, void, Op, Args...>::Type;
 
-    /** @brief Check if the expression perfectly match a type */
-    template<typename Expected, template<typename...> class Op, typename... Args>
-    constexpr bool IsDetectedExact = std::is_same_v<Expected, DetectedType<Op, Args...>>;
+        /** @brief Check if the expression perfectly match a type */
+        template<typename Expected, template<typename...> class Op, typename... Args>
+        constexpr bool IsDetectedExact = std::is_same_v<Expected, DetectedType<Op, Args...>>;
 
-    /** @brief Check if the expression is convertible to a type */
-    template<typename Convertible, template<typename...> class Op, typename... Args>
-    constexpr bool IsDetectedConvertible = std::is_convertible_v<Convertible, DetectedType<Op, Args...>>;
+        /** @brief Check if the expression is convertible to a type */
+        template<typename Convertible, template<typename...> class Op, typename... Args>
+        constexpr bool IsDetectedConvertible = std::is_convertible_v<Convertible, DetectedType<Op, Args...>>;
+    }
 }

@@ -34,7 +34,7 @@ public:
 
 
     /** @brief Vector header, aligned to either sizeof(Range) * 2 or size of a cacheline depending on Type size */
-    struct alignas(sizeof(Type) <= sizeof(Range) * 2 ? sizeof(Range) * 2 : Core::Utils::CacheLineSize) Header
+    struct alignas(sizeof(Type) <= sizeof(Range) * 2 ? sizeof(Range) * 2 : Core::CacheLineSize) Header
     {
         Range size {};
         Range capacity {};
