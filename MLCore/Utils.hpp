@@ -36,22 +36,45 @@
 #define noexcept_expr(Expression) noexcept(nothrow_expr(Expression))
 
 /** @brief Align a variable / structure to cacheline size */
-#define CORE_ALIGN_CACHELINE alignas(Core::CacheLineSize)
-#define CORE_ALIGN_CACHELINE2 alignas(Core::CacheLineSize * 2)
+#define alignas_cacheline alignas(Core::CacheLineSize)
+#define alignas_double_cacheline alignas(Core::CacheLineDoubleSize)
+#define alignas_half_cacheline alignas(Core::CacheLineHalfSize)
+#define alignas_quarter_cacheline alignas(Core::CacheLineQuarterSize)
+#define alignas_eighth_cacheline alignas(Core::CacheLineEighthSize)
 
-/** @brief Compile-time ternary expression */
-#define ConstexprTernary(condition, body, elseBody) [] { if constexpr (condition) { return body; } else { return elseBody; } }()
 
-/** @brief Compile-time ternary expression with runtime reference capture */
-#define ConstexprTernaryRef(condition, body, elseBody) [&] { if constexpr (condition) { return body; } else { return elseBody; } }()
+/** @brief Helpers used to assert alignment of a structure */
+#define static_assert_alignof(Type, Alignment) static_assert(alignof(Type) == Alignment, #Type " must be aligned to " #Alignment)
+#define static_assert_alignof_cacheline(Type) static_assert_alignof(Type, Core::CacheLineSize)
+#define static_assert_alignof_double_cacheline(Type) static_assert_alignof(Type, Core::CacheLineDoubleSize)
+#define static_assert_alignof_half_cacheline(Type) static_assert_alignof(Type, Core::CacheLineHalfSize)
+#define static_assert_alignof_quarter_cacheline(Type) static_assert_alignof(Type, Core::CacheLineQuarterSize)
+#define static_assert_alignof_eighth_cacheline(Type) static_assert_alignof(Type, Core::CacheLineEighthSize)
 
-/** @brief Compile-time ternary expression with runtime copy capture */
-#define ConstexprTernaryCopy(condition, body, elseBody) [=] { if constexpr (condition) { return body; } else { return elseBody; } }()
+/** @brief Helpers used to assert size of a structure */
+#define static_assert_sizeof(Type, Size) static_assert(sizeof(Type) == Size, #Type " must have a size of " #Size)
+#define static_assert_sizeof_cacheline(Type) static_assert_sizeof(Type, Core::CacheLineSize)
+#define static_assert_sizeof_double_cacheline(Type) static_assert_sizeof(Type, Core::CacheLineDoubleSize)
+#define static_assert_sizeof_half_cacheline(Type) static_assert_sizeof(Type, Core::CacheLineHalfSize)
+#define static_assert_sizeof_quarter_cacheline(Type) static_assert_sizeof(Type, Core::CacheLineQuarterSize)
+#define static_assert_sizeof_eighth_cacheline(Type) static_assert_sizeof(Type, Core::CacheLineEighthSize)
+
+/** @brief Helpers used to assert that the size and alignment of a structure are equal to themselves and a given value */
+#define static_assert_fit(Type, Size) static_assert(sizeof(Type) == alignof(Type) && alignof(Type) == Size, #Type " must have a size of " #Size " and be aligned to " #Size)
+#define static_assert_fit_cacheline(Type) static_assert_fit(Type, Core::CacheLineSize)
+#define static_assert_fit_double_cacheline(Type) static_assert_fit(Type, Core::CacheLineDoubleSize)
+#define static_assert_fit_half_cacheline(Type) static_assert_fit(Type, Core::CacheLineHalfSize)
+#define static_assert_fit_quarter_cacheline(Type) static_assert_fit(Type, Core::CacheLineQuarterSize)
+#define static_assert_fit_eighth_cacheline(Type) static_assert_fit(Type, Core::CacheLineEighthSize)
 
 namespace Core
 {
     /** @brief Theorical cacheline size */
-    constexpr std::size_t CacheLineSize = 64ul;
+    constexpr std::size_t CacheLineSize = sizeof(std::size_t) * 8;
+    constexpr std::size_t CacheLineDoubleSize = CacheLineSize * 2;
+    constexpr std::size_t CacheLineHalfSize = CacheLineSize / 2;
+    constexpr std::size_t CacheLineQuarterSize = CacheLineSize / 4;
+    constexpr std::size_t CacheLineEighthSize = CacheLineSize / 8;
 
     namespace Utils
     {
