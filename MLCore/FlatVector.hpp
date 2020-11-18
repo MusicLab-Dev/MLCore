@@ -33,8 +33,8 @@ public:
     using ConstIterator = const Type *;
 
 
-    /** @brief Vector header, aligned to either sizeof(Range) * 2 or size of a cacheline depending on Type size */
-    struct alignas(sizeof(Type) <= sizeof(Range) * 2 ? sizeof(Range) * 2 : Core::CacheLineSize) Header
+    /** @brief Vector header, automatically aligned to the best size fit */
+    struct alignas(alignof(Type) <= sizeof(Range) * 2 ? sizeof(Range) * 2 : alignof(Type)) Header
     {
         Range size {};
         Range capacity {};
